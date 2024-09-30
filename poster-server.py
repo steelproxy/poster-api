@@ -141,6 +141,17 @@ def report_post(bot_name):
 
     return jsonify({"error": "Bot not found"}), 404
 
+@app.route('/bots/<bot_name>/ping', methods=['POST'])
+@require_auth
+def ping_bot(bot_name):
+    for bot in bots:
+        if bot['name'] == bot_name:
+            bot['last_ping'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            bot['last_ip'] = request.remote_addr
+            logging.info(f"Bot '{bot_name}' pinged. IP: {bot['last_ip']}, Time: {bot['last_ping']}")
+            return jsonify({"message": "Ping received", "ip": bot['last_ip'], "time": bot['last_ping']}), 200
+
+    return jsonify({"error": "Bot not found"}), 404
 
 @app.route('/bots/job', methods=['POST'])
 @require_auth
