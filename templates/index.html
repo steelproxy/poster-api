@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Monitor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #121212;
+        color: #f0f0f0;
+      }
+      h1, h2 {
+        color: #e0e0e0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        background-color: #1e1e1e;
+      }
+      th, td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #444;
+      }
+      th {
+        background-color: #007bff;
+        color: white;
+      }
+      input, textarea {
+        padding: 10px;
+        margin: 5px 0;
+        width: calc(100% - 20px);
+        border: 1px solid #444;
+        border-radius: 4px;
+        background-color: #1e1e1e;
+        color: #f0f0f0;
+      }
+      button {
+        padding: 10px 15px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #218838;
+      }
+      #requestResponsePanel, #reportPanel, #deletePanel, #jobRequestPanel, #createBotPanel {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #1e1e1e;
+        border: 1px solid #444;
+        border-radius: 4px;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow: auto;
+        color: #333;
+      }
+      .scrollable-list {
+        max-height: 100px;
+        overflow-y: auto;
+        background-color: #2e2e2e;
+        padding: 5px;
+        border: 1px solid #444;
+        border-radius: 4px;
+      }
+    </style>
+    <script>
+      let lastRequest = '';
+      let lastResponse = '';
+
+      async function fetchBots() {
+        const response = await fetch('/bots', {
+          headers: { 'Authorization': 'Bearer your_secure_token_here' }
+        });
+        if (!response.ok) {
+          console.error('Failed to fetch bots:', response.status);
+          return;
+        }
+        const bots = await response.json();
+        const botsTable = document.getElementById('botsTable');
+        botsTable.innerHTML = '';
+        bots.forEach(bot => {
+          const status = bot.last_ping && new Date() - new Date(bot.last_ping) < 10000 ? 'Active' : 'Inactive';
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${bot.name}</td><td>${bot.wait}</td><td>${bot.current_posts}</td><td>${bot.total_posts}</td><td class="scrollable-list">${bot.groups.join('<br/>')}</td><td>${bot.last_report ? bot.last_report.content : 'N/A'}</td><td>${bot.last_report ? bot.last_report.time : 'N/A'}</td><td>${bot.last_report ? bot.last_report.group : 'N/A'}</td><td>${status}</td><td>${bot.last_ping ? bot.last_ping : 'N/A'}</td><td>${bot.last_ip ? bot.last_ip : 'N/A'}</td><td><button onclick="deleteBot('${bot.name}')">Delete</button></td>`;
+          botsTable.appendChild(row);
+        });
+      }
+
+      async function sendRequest(method) {
+        const name = document.getElementById('botName').value;
+        const wait = document.getElementById('botWait').value;
+        const totalPosts = document.getElementById('botTotalPosts').value;
+        const groups = document.getElementById('botGroups').value.split(',');
+
+        const body = { name, wait, groups, total_posts: totalPosts };
+        lastRequest = JSON.stringify(body, null, 2);
+        document.getElementById('lastRequest').innerText = lastRequest;
+
+        const response = await fetch(`/create-bot`, {
+          method: method,
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer your_secure_token_here' },
+          body: JSON.stringify(body)
+        });
+
+        const result = await response.json();
+        lastResponse = JSON.stringify(result, null, 2);
+        document.getElementById('lastResponse').innerText = lastResponse;
+
+        console.log(result);
+        fetchBots();
+      }
+
+      async function deleteBot(botName) {
+        const response = await fetch(`/bots/${botName}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer your_secure_token_here' }
+        });
+
+        const result = await response.json();
+        lastResponse = JSON.stringify(result, null, 2);
+        document.getElementById('lastResponse').innerText = lastResponse;
+
+        console.log(result);
+        fetchBots();
+      }
+
+      async function reportPost() {
+        const name = document.getElementById('reportBotName').value;
+        const content = document.getElementById('reportContent').value;
+        const group = document.getElementById('reportGroup').value;
+
+        const body = { content, group };
+        lastRequest = JSON.stringify(body, null, 2);
+        document.getElementById('lastRequest').innerText = lastRequest;
+
+        const response = await fetch(`/bots/${name}/report`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer your_secure_token_here' },
+          body: JSON.stringify(body)
+        });
+
+        const result = await response.json();
+        lastResponse = JSON.stringify(result, null, 2);
+        document.getElementById('lastResponse').innerText = lastResponse;
+
+        console.log(result);
+        fetchBots();
+      }
+
+      async function submitJobRequest() {
+        const botName = document.getElementById('jobBotName').value;
+        const groups = document.getElementById('jobGroups').value.split(',');
+        const posts = document.getElementById('jobPosts').value.split(',');
+
+        const body = { groups, posts };
+        lastRequest = JSON.stringify(body, null, 2);
+        document.getElementById('lastRequest').innerText = lastRequest;
+
+        const response = await fetch(`/bots/${botName}/job-request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer your_secure_token_here' },
+          body: JSON.stringify(body)
+        });
+
+        const result = await response.json();
+        lastResponse = JSON.stringify(result, null, 2);
+        document.getElementById('lastResponse').innerText = lastResponse;
+
+        console.log(result);
+        fetchBots();
+      }
+
+      setInterval(fetchBots, 1000);
+    </script>
+  </head>
+  <body>
+    <h1>Bot Monitor</h1>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Wait</th>
+          <th>Current Posts</th>
+          <th>Total Posts</th>
+          <th>Groups</th>
+          <th>Last Report Content</th>
+          <th>Last Report Time</th>
+          <th>Last Report Group</th>
+          <th>Connection Status</th>
+          <th>Last Ping</th>
+          <th>Last IP Address</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="botsTable"></tbody>
+    </table>
+
+    <div id="createBotPanel">
+      <h2>Create Bot</h2>
+      <input id="botName" placeholder="Name">
+      <input id="botWait" placeholder="Wait Time">
+      <input id="botTotalPosts" placeholder="Total Posts">
+      <input id="botGroups" placeholder="Groups (comma-separated)">
+      <button onclick="sendRequest('POST')">Create Bot</button>
+    </div>
+
+    <div id="deletePanel">
+      <h2>Delete Bot</h2>
+      <input id="deleteBotName" placeholder="Bot Name">
+      <button onclick="deleteBot()">Delete Bot</button>
+    </div>
+
+    <div id="reportPanel">
+      <h2>Report Post</h2>
+      <input id="reportBotName" placeholder="Bot Name">
+      <input id="reportContent" placeholder="Content">
+      <input id="reportGroup" placeholder="Group">
+      <button onclick="reportPost()">Report Post</button>
+    </div>
+
+    <div id="jobRequestPanel">
+      <h2>Submit Job Request</h2>
+      <input id="jobBotName" placeholder="Bot Name">
+      <input id="jobGroups" placeholder="Groups (comma-separated)">
+      <textarea id="jobPosts" placeholder="Posts (comma-separated)"></textarea>
+      <button onclick="submitJobRequest()">Submit Job Request</button>
+    </div>
+
+    <div id="requestResponsePanel">
+      <h2>Raw Request/Response</h2>
+      <h4>Last Request</h4>
+      <pre id="lastRequest"></pre>
+      <h4>Last Response</h4>
+      <pre id="lastResponse"></pre>
+    </div>
+  </body>
+</html>
