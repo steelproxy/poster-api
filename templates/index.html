@@ -74,6 +74,14 @@
         border: 1px solid #444;
         border-radius: 4px;
       }
+      .scrollable-content {
+        max-height: 60px; /* Adjust height as needed */
+        overflow-y: auto;
+        background-color: #2e2e2e;
+        padding: 5px;
+        border: 1px solid #444;
+        border-radius: 4px;
+      }
     </style>
     <script>
       let lastRequest = '';
@@ -93,7 +101,7 @@
         bots.forEach(bot => {
           const status = bot.last_ping && new Date() - new Date(bot.last_ping) < 10000 ? 'Active' : 'Inactive';
           const row = document.createElement('tr');
-          row.innerHTML = `<td>${bot.name}</td><td>${bot.wait}</td><td>${bot.current_posts}</td><td>${bot.total_posts}</td><td class="scrollable-list">${bot.groups.join('<br/>')}</td><td>${bot.last_report ? bot.last_report.content : 'N/A'}</td><td>${bot.last_report ? bot.last_report.time : 'N/A'}</td><td>${bot.last_report ? bot.last_report.group : 'N/A'}</td><td>${status}</td><td>${bot.last_ping ? bot.last_ping : 'N/A'}</td><td>${bot.last_ip ? bot.last_ip : 'N/A'}</td><td><button onclick="deleteBot('${bot.name}')">Delete</button></td>`;
+          row.innerHTML = `<td>${bot.name}</td><td>${bot.wait}</td><td>${bot.current_posts}</td><td>${bot.total_posts}</td><td class="scrollable-list">${bot.groups.join('<br/>')}</td><td><div class="scrollable-content">${bot.last_report ? bot.last_report.content : 'N/A'}</div></td><td>${bot.last_report ? bot.last_report.time : 'N/A'}</td><td>${bot.last_report ? bot.last_report.group : 'N/A'}</td><td>${status}</td><td>${bot.last_ping ? bot.last_ping : 'N/A'}</td><td>${bot.last_ip ? bot.last_ip : 'N/A'}</td><td><button onclick="deleteBot('${bot.name}')">Delete</button></td>`;
           botsTable.appendChild(row);
         });
       }
